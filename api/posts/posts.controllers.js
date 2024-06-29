@@ -12,6 +12,7 @@ exports.fetchPost = async (postId, next) => {
 
 exports.postsCreate = async (req, res, next) => {
   try {
+    req.body.user = req.user._id;
     const newPost = await Post.create(req.body);
 
     await Author.findByIdAndUpdate(req.body.author, {
@@ -24,16 +25,25 @@ exports.postsCreate = async (req, res, next) => {
   }
 };
 
-exports.postsDelete = async (req, res) => {
+exports.postsDelete = async (req, res, next) => {
   try {
-    await Post.findByIdAndRemove({ _id: req.Post.id });
+    // send. req = req.user
+    const post = await Post.findById(req.post.id);
+
+    if (post.user.equals(req.user._id)) {
+      await Post.findByIdAndRemove({ _id: req.Post.id });
+    } else {
+      return res
+        .status(401)
+        .json({ msg: "you cannot delete someone else's post!" });
+    }
     res.status(204).end();
   } catch (error) {
     next(error);
   }
 };
 
-exports.postsUpdate = async (req, res) => {
+exports.postsUpdate = async (req, res, next) => {
   try {
     await Post.findByIdAndUpdate(req.post.id, req.body);
     res.status(204).end();
@@ -42,7 +52,7 @@ exports.postsUpdate = async (req, res) => {
   }
 };
 
-exports.postsGet = async (req, res) => {
+exports.postsGet = async (req, res, next) => {
   try {
     const posts = await Post.find()
       .populate("tags", "-_id -__v")
